@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Pulse - Live Release Notes Dashboard</title>
+    <meta name="description" content="Track, filter, and share Google Cloud BigQuery release notes in real-time. Custom UI with search, statistics, and X/Twitter sharing integrations.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Local Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background Glow Elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- App Shell -->
+    <div class="app-container">
+        <!-- Sticky Navigation Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                </div>
+                <h1>BigQuery <span class="gradient-text">Release Pulse</span></h1>
+            </div>
+            
+            <div class="header-actions">
+                <span id="last-updated-time" class="last-updated">Last checked: Never</span>
+                <button id="btn-refresh" class="btn btn-primary" title="Refresh Release Notes">
+                    <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+                    <span>Refresh Feed</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Stats Dashboard Dashboard -->
+            <section class="stats-dashboard" aria-label="Quick Statistics">
+                <div class="stat-card" id="stat-total">
+                    <div class="stat-icon"><i class="fa-solid fa-list-ul"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Updates</span>
+                        <h3 class="stat-value">-</h3>
+                    </div>
+                </div>
+                <div class="stat-card" id="stat-features">
+                    <div class="stat-icon text-feature"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">New Features</span>
+                        <h3 class="stat-value">-</h3>
+                    </div>
+                </div>
+                <div class="stat-card" id="stat-announcements">
+                    <div class="stat-icon text-announcement"><i class="fa-solid fa-bullhorn"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Announcements</span>
+                        <h3 class="stat-value">-</h3>
+                    </div>
+                </div>
+                <div class="stat-card" id="stat-issues">
+                    <div class="stat-icon text-issue"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Issues & Fixes</span>
+                        <h3 class="stat-value">-</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filters and Search Toolbar -->
+            <section class="control-panel">
+                <div class="search-container">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search release notes by keywords (e.g. Gemini, external, speed)..." autocomplete="off">
+                    <button id="search-clear" class="search-clear-btn" aria-label="Clear search" style="display: none;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <div class="filters-container">
+                    <span class="filter-label">Filter by type:</span>
+                    <div class="filter-chips">
+                        <button class="filter-chip active" data-filter="all" id="filter-all">All</button>
+                        <button class="filter-chip" data-filter="feature" id="filter-feature"><i class="fa-solid fa-circle-play text-feature-dot"></i> Features</button>
+                        <button class="filter-chip" data-filter="announcement" id="filter-announcement"><i class="fa-solid fa-circle-play text-announcement-dot"></i> Announcements</button>
+                        <button class="filter-chip" data-filter="issue" id="filter-issue"><i class="fa-solid fa-circle-play text-issue-dot"></i> Issues / Fixes</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Content Grid -->
+            <section class="content-feed">
+                <!-- Loading State -->
+                <div id="loading-state" class="feed-state-container">
+                    <div class="spinner-large"></div>
+                    <p class="state-message">Fetching the latest BigQuery release notes...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="error-state" class="feed-state-container hidden">
+                    <div class="error-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+                    <h3>Failed to load release notes</h3>
+                    <p id="error-message" class="state-message">Could not connect to Google Cloud documentation feeds.</p>
+                    <button id="btn-retry" class="btn btn-secondary">
+                        <i class="fa-solid fa-arrows-rotate"></i> Retry Connection
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="feed-state-container hidden">
+                    <div class="empty-icon"><i class="fa-regular fa-folder-open"></i></div>
+                    <h3>No matching updates found</h3>
+                    <p class="state-message">Try adjusting your filters or search keywords.</p>
+                    <button id="btn-reset-filters" class="btn btn-secondary">Clear Filters & Search</button>
+                </div>
+
+                <!-- Cards Container -->
+                <div id="notes-list" class="notes-list hidden">
+                    <!-- Cards will be dynamically injected here -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Elegant Footer -->
+        <footer class="app-footer">
+            <p>BigQuery Release Pulse is built using Python Flask & Vanilla Web Technologies.</p>
+            <p class="footer-links">
+                <a href="https://docs.cloud.google.com/feeds/bigquery-release-notes.xml" target="_blank" rel="noopener"><i class="fa-solid fa-rss"></i> Original Feed</a>
+                <span class="divider">•</span>
+                <a href="https://cloud.google.com/bigquery/docs/release-notes" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i> Official Docs</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Interactive Tweet Composer Modal -->
+    <div id="tweet-modal" class="modal-overlay hidden" aria-modal="true" role="dialog">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-brands fa-x-twitter"></i> Compose Tweet</h3>
+                <button id="modal-close" class="modal-close-btn" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="tweet-card-preview">
+                    <div class="tweet-user">
+                        <div class="tweet-avatar"><i class="fa-solid fa-user"></i></div>
+                        <div class="tweet-user-info">
+                            <span class="tweet-display-name">You</span>
+                            <span class="tweet-handle">@user</span>
+                        </div>
+                    </div>
+                    <textarea id="tweet-textarea" rows="6" placeholder="What's happening?"></textarea>
+                    
+                    <div class="tweet-meta-preview">
+                        <div class="tweet-link-box">
+                            <i class="fa-solid fa-link"></i>
+                            <span class="tweet-link-text">cloud.google.com/bigquery/docs/release-notes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tweet-actions-row">
+                    <div class="character-counter-container">
+                        <svg class="progress-ring" width="36" height="36">
+                            <circle class="progress-ring__circle-bg" stroke="#1e293b" stroke-width="3" fill="transparent" r="14" cx="18" cy="18" />
+                            <circle id="progress-ring-indicator" class="progress-ring__circle" stroke="#38bdf8" stroke-width="3" fill="transparent" r="14" cx="18" cy="18" />
+                        </svg>
+                        <span id="char-count" class="char-count">0 / 280</span>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="btn-copy-tweet" class="btn btn-secondary">
+                            <i class="fa-regular fa-copy"></i> Copy Text
+                        </button>
+                        <a id="btn-post-tweet" href="#" target="_blank" rel="noopener" class="btn btn-twitter disabled">
+                            <i class="fa-brands fa-x-twitter"></i> Post to X
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification for clipboard operations -->
+    <div id="toast" class="toast hidden">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-text">Copied to clipboard!</span>
+    </div>
+
+    <!-- Application Script -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
